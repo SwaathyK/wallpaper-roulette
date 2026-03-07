@@ -24,7 +24,13 @@ export default function BarToGradientPreview({
   const barWidthPercent = totalSpins > 0 ? 100 / totalSpins : 0;
 
   useEffect(() => {
-    if (!showGradient) setFuseComplete(false);
+    if (!showGradient) {
+      setFuseComplete(false);
+      return;
+    }
+    // Fallback: show buttons after fuse animation time (onAnimationComplete can miss in production)
+    const fallback = setTimeout(() => setFuseComplete(true), 800);
+    return () => clearTimeout(fallback);
   }, [showGradient]);
 
   const randomizeDirection = () => {
