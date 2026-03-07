@@ -8,6 +8,7 @@ Spin a color wheel, collect hues, and generate gradient wallpapers. Pick how man
 - **Live bars** — Each spin adds a vertical bar (1/3, 1/4, or 1/5 of the image width for 3–5 spins).
 - **Fuse animation** — Bars squeeze and blend into one gradient in the same block.
 - **Gradient controls** — Randomize direction; download PNG that matches what you see on screen.
+- **Spin sound (optional)** — 3-second wheel spin; animation is timed to match. See `public/sounds/README.md`.
 
 ## Run locally
 

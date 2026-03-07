@@ -1,8 +1,10 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { motion, useAnimation } from 'framer-motion';
 import { WHEEL_COLORS, colorFromAngle } from '../utils/colorGenerator';
+
+const FALLBACK_SPIN_DURATION_S = 3;
 
 interface RouletteWheelProps {
   onColorSelected: (color: string) => void;
@@ -14,6 +16,24 @@ export default function RouletteWheel({ onColorSelected, disabled }: RouletteWhe
   const [spinning, setSpinning] = useState(false);
   const [landedColor, setLandedColor] = useState<string | null>(null);
   const accumulatedRotation = useRef(0);
+  const spinSoundRef = useRef<HTMLAudioElement | null>(null);
+  const spinDurationRef = useRef(FALLBACK_SPIN_DURATION_S);
+
+  // Preload sound and use its real duration so wheel stops when sound ends
+  useEffect(() => {
+    const audio = new Audio('/sounds/spin.mp3');
+    spinSoundRef.current = audio;
+    const onLoadedMetadata = () => {
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        spinDurationRef.current = audio.duration;
+      }
+    };
+    audio.addEventListener('loadedmetadata', onLoadedMetadata);
+    audio.load();
+    return () => {
+      audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+    };
+  }, []);
 
   const NUM_SEGMENTS = WHEEL_COLORS.length;
   const SEGMENT_ANGLE = 360 / NUM_SEGMENTS;
@@ -37,6 +57,17 @@ export default function RouletteWheel({ onColorSelected, disabled }: RouletteWhe
     setSpinning(true);
     setLandedColor(null);
 
+    const durationS = spinDurationRef.current;
+
+    try {
+      if (spinSoundRef.current) {
+        spinSoundRef.current.currentTime = 0;
+        spinSoundRef.current.play().catch(() => {});
+      }
+    } catch {
+      // No sound if file missing or autoplay blocked
+    }
+
     const extraRotations = 3 + Math.floor(Math.random() * 3);
     const randomExtra = Math.random() * 360;
     const delta = extraRotations * 360 + randomExtra;
@@ -44,7 +75,7 @@ export default function RouletteWheel({ onColorSelected, disabled }: RouletteWhe
 
     await controls.start({
       rotate: accumulatedRotation.current,
-      transition: { duration: 2.5, ease: [0.22, 1, 0.36, 1] },
+      transition: { duration: durationS, ease: [0.22, 1, 0.36, 1] },
     });
 
     const color = colorFromAngle(accumulatedRotation.current, WHEEL_COLORS);
