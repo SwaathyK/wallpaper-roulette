@@ -25,7 +25,7 @@ export default function ColorFillPreview({ collectedColors, totalSpins }: ColorF
         Your palette
       </span>
       <div className="relative" style={{ width: size, height: size }}>
-        {Array.from({ length: totalSpins }).map((i) => {
+        {Array.from({ length: totalSpins }, (_, i: number) => {
           const color = collectedColors[i];
           const angle = (i / totalSpins) * 2 * Math.PI - Math.PI / 2;
           const r = baseR * (0.65 + (i % 3) * 0.12);
