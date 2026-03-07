@@ -1,15 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { hslToHex } from '../utils/colorGenerator';
 import { generateGradientDataUrl, downloadDataUrl } from '../utils/canvasUtils';
+
+function shuffle<T>(arr: T[]): T[] {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
 
 interface BarToGradientPreviewProps {
   collectedColors: string[];
   totalSpins: number;
   showGradient: boolean;
   onReset: () => void;
+  onRequestGenerate?: () => void;
 }
 
 /** One 16:9 block: bars fill as you spin, then fuse in-place into gradient. Buttons below. */
@@ -18,28 +28,53 @@ export default function BarToGradientPreview({
   totalSpins,
   showGradient,
   onReset,
+  onRequestGenerate,
 }: BarToGradientPreviewProps) {
   const [fuseComplete, setFuseComplete] = useState(false);
   const [gradientAngle, setGradientAngle] = useState(() => Math.floor(Math.random() * 360));
+  const [gradientColorOrder, setGradientColorOrder] = useState<number[]>([]);
+  const initialOrderRef = useRef<number[] | null>(null);
   const barWidthPercent = totalSpins > 0 ? 100 / totalSpins : 0;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!showGradient) {
       setFuseComplete(false);
+      initialOrderRef.current = null;
       return;
     }
-    // Fallback: show buttons after fuse animation time (onAnimationComplete can miss in production)
+    if (initialOrderRef.current && initialOrderRef.current.length === collectedColors.length) {
+      setGradientColorOrder(initialOrderRef.current);
+    }
+  }, [showGradient, collectedColors.length]);
+
+  useEffect(() => {
+    if (!showGradient) return;
     const fallback = setTimeout(() => setFuseComplete(true), 800);
     return () => clearTimeout(fallback);
   }, [showGradient]);
 
+  const orderedColors =
+    gradientColorOrder.length === collectedColors.length
+      ? gradientColorOrder.map((i) => collectedColors[i])
+      : (() => {
+          if (!showGradient || collectedColors.length === 0) return collectedColors;
+          if (initialOrderRef.current === null || initialOrderRef.current.length !== collectedColors.length) {
+            initialOrderRef.current = shuffle(collectedColors.map((_, i) => i));
+          }
+          return initialOrderRef.current.map((i) => collectedColors[i]);
+        })();
+
   const randomizeDirection = () => {
     setGradientAngle(Math.floor(Math.random() * 360));
+    const indices = gradientColorOrder.length === collectedColors.length
+      ? gradientColorOrder
+      : collectedColors.map((_, i) => i);
+    setGradientColorOrder(shuffle([...indices]));
   };
 
   const cssGradient =
-    collectedColors.length > 0
-      ? `linear-gradient(${gradientAngle}deg, ${collectedColors.map(hslToHex).join(', ')})`
+    orderedColors.length > 0
+      ? `linear-gradient(${gradientAngle}deg, ${orderedColors.map(hslToHex).join(', ')})`
       : 'transparent';
 
   return (
@@ -54,34 +89,54 @@ export default function BarToGradientPreview({
       >
         <AnimatePresence mode="wait">
           {!showGradient ? (
-            /* Bars */
-            <motion.div
-              key="bars"
-              initial={false}
-              className="absolute inset-0 flex flex-row"
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              {Array.from({ length: totalSpins }).map((_, i) => {
-                const color = collectedColors[i];
-                const filled = !!color;
-                return (
-                  <motion.div
-                    key={`${i}-${color ?? 'empty'}`}
-                    initial={filled ? { scaleX: 0, opacity: 0.9 } : { scaleX: 1, opacity: 1 }}
-                    animate={{ scaleX: 1, opacity: 1 }}
-                    transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-                    style={{
-                      width: `${barWidthPercent}%`,
-                      flexShrink: 0,
-                      height: '100%',
-                      background: color || '#e8e6e3',
-                      transformOrigin: 'center',
-                    }}
-                  />
-                );
-              })}
-            </motion.div>
+            /* Bars + optional Generate overlay when all filled */
+            <>
+              <motion.div
+                key="bars"
+                initial={false}
+                className="absolute inset-0 flex flex-row"
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                {Array.from({ length: totalSpins }).map((_, i) => {
+                  const color = collectedColors[i];
+                  const filled = !!color;
+                  return (
+                    <motion.div
+                      key={`${i}-${color ?? 'empty'}`}
+                      initial={filled ? { scaleX: 0, opacity: 0.9 } : { scaleX: 1, opacity: 1 }}
+                      animate={{ scaleX: 1, opacity: 1 }}
+                      transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                      style={{
+                        width: `${barWidthPercent}%`,
+                        flexShrink: 0,
+                        height: '100%',
+                        background: color || '#e8e6e3',
+                        transformOrigin: 'center',
+                      }}
+                    />
+                  );
+                })}
+              </motion.div>
+              {/* Generate Background overlay when all slots filled */}
+              {collectedColors.length === totalSpins && onRequestGenerate && (
+                <button
+                  type="button"
+                  onClick={onRequestGenerate}
+                  className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-black/20 transition-colors hover:bg-black/30 active:bg-black/40"
+                  style={{
+                    fontFamily: 'var(--font-geist-sans), sans-serif',
+                    fontWeight: 900,
+                    fontSize: 'clamp(14px, 2.8vw, 22px)',
+                    color: 'rgba(255,255,255,0.92)',
+                    letterSpacing: '-0.02em',
+                    textShadow: '0 1px 3px rgba(0,0,0,0.25)',
+                  }}
+                >
+                  Generate Background
+                </button>
+              )}
+            </>
           ) : (
             /* Fuse: bars squeeze/fade, gradient fades in same container */
             <motion.div
@@ -98,7 +153,7 @@ export default function BarToGradientPreview({
                 style={{ transformOrigin: 'center center' }}
                 onAnimationComplete={() => setFuseComplete(true)}
               >
-                {collectedColors.map((color, i) => (
+                {orderedColors.map((color, i) => (
                   <div
                     key={i}
                     style={{
@@ -123,15 +178,15 @@ export default function BarToGradientPreview({
         </AnimatePresence>
       </div>
 
-      {/* Buttons: only show download + randomizer when gradient is shown; hint when bars */}
-      {!showGradient && collectedColors.length > 0 && (
+      {/* Hint when bars are partially filled */}
+      {!showGradient && collectedColors.length > 0 && collectedColors.length < totalSpins && (
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="text-xs text-center"
           style={{ color: '#94a3b8', fontFamily: 'var(--font-geist-sans), sans-serif' }}
         >
-          {collectedColors.length} of {totalSpins} colors · Click Generate to fuse
+          {collectedColors.length} of {totalSpins} colors · spin again or remove one above
         </motion.p>
       )}
 
@@ -144,7 +199,7 @@ export default function BarToGradientPreview({
         >
           {/* Square download icon button */}
           <button
-            onClick={() => downloadDataUrl(generateGradientDataUrl(collectedColors, 1920, 1080, gradientAngle))}
+            onClick={() => downloadDataUrl(generateGradientDataUrl(orderedColors, 1920, 1080, gradientAngle))}
             className="w-12 h-12 rounded-xl flex items-center justify-center text-white transition-all duration-150 hover:opacity-90 active:scale-95"
             style={{ background: '#ff4e10', boxShadow: '0 2px 12px rgba(255,78,16,0.3)' }}
             title="Download PNG"

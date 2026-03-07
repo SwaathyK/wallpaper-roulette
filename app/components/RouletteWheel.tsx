@@ -85,39 +85,46 @@ export default function RouletteWheel({ onColorSelected, disabled }: RouletteWhe
   };
 
   return (
-    <div className="flex flex-col items-center gap-5 select-none">
-      <div className="relative" style={{ width: SIZE + 24, height: SIZE + 24 }}>
+    <div className="flex flex-col items-center gap-4 lg:gap-5 select-none">
+      {/* Responsive container: max 364px on desktop, 90vmin on mobile so it fits */}
+      <div
+        className="relative"
+        style={{
+          width: 'min(364px, 90vmin)',
+          height: 'min(364px, 90vmin)',
+          maxWidth: 364,
+          maxHeight: 364,
+        }}
+      >
         {/* Landed glow */}
         {landedColor && (
           <div
-            className="absolute inset-4 rounded-full opacity-20 blur-3xl transition-all duration-700 pointer-events-none"
+            className="absolute inset-[3.3%] rounded-full opacity-20 blur-3xl transition-all duration-700 pointer-events-none"
             style={{ background: landedColor }}
           />
         )}
 
         {/* Pointer at top */}
-        <div className="absolute left-1/2 -translate-x-1/2 top-0 z-20 pointer-events-none">
-          <svg width="20" height="26" viewBox="0 0 20 26">
+        <div className="absolute left-1/2 -translate-x-1/2 top-0 z-20 pointer-events-none w-[5.5%] h-auto min-w-[18px]">
+          <svg viewBox="0 0 20 26" className="w-full h-auto">
             <path d="M10 24 L2 4 Q10 0 18 4 Z" fill="#222" />
           </svg>
         </div>
 
-        {/* Spinning wheel */}
+        {/* Spinning wheel — fills padded area so it scales */}
         <motion.div
-          className="absolute"
+          className="absolute rounded-full overflow-hidden"
           style={{
-            top: 12,
-            left: 12,
-            width: SIZE,
-            height: SIZE,
-            borderRadius: '50%',
-            overflow: 'hidden',
+            top: '3.3%',
+            left: '3.3%',
+            width: '93.4%',
+            height: '93.4%',
             boxShadow: '0 8px 40px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)',
           }}
           animate={controls}
           initial={{ rotate: 0 }}
         >
-          <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+          <svg width="100%" height="100%" viewBox={`0 0 ${SIZE} ${SIZE}`} className="block">
             {WHEEL_COLORS.map((color, i) => (
               <path
                 key={i}
@@ -133,11 +140,11 @@ export default function RouletteWheel({ onColorSelected, disabled }: RouletteWhe
           </svg>
         </motion.div>
 
-        {/* Center spin button — centered with wheel (no offset) */}
+        {/* Center spin button — touch-friendly min 44px */}
         <button
           onClick={spin}
           disabled={spinning || disabled}
-          className="absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 w-[60px] h-[60px] rounded-full flex items-center justify-center"
+          className="absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 w-[16.5%] h-[16.5%] min-w-[44px] min-h-[44px] max-w-[60px] max-h-[60px] rounded-full flex items-center justify-center"
           aria-label="Spin"
         >
           <div

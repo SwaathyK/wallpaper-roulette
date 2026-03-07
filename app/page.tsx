@@ -39,6 +39,12 @@ export default function Home() {
     setShowGradient(false);
   };
 
+  const handleRemoveColor = (index: number) => {
+    if (reSpinIndex !== null || showGradient) return;
+    setCollectedColors((prev) => prev.filter((_, i) => i !== index));
+    setShowGradient(false);
+  };
+
   const handleReset = () => {
     setCollectedColors([]);
     setReSpinIndex(null);
@@ -54,13 +60,12 @@ export default function Home() {
 
   return (
     <main
-      className="w-screen h-screen overflow-hidden flex"
+      className="w-full min-h-screen lg:h-screen lg:overflow-hidden flex flex-col lg:flex-row"
       style={{ background: '#f5f4f1', fontFamily: 'var(--font-inter), Inter, sans-serif' }}
     >
       {/* ── LEFT: Heading + contents ── */}
       <div
-        className="flex flex-col justify-between h-full px-8 py-12 shrink-0"
-        style={{ width: '28%', borderRight: '1px solid #e2e0da' }}
+        className="flex flex-col justify-between w-full lg:w-[28%] lg:shrink-0 lg:h-full px-6 py-8 lg:px-8 lg:py-12 border-b lg:border-b-0 lg:border-r border-[#e2e0da]"
       >
         {/* Top: branding */}
         <div className="flex flex-col gap-1">
@@ -73,14 +78,14 @@ export default function Home() {
         </div>
 
         {/* Middle: heading + controls */}
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-6 lg:gap-8">
           <div className="flex flex-col gap-3">
             <h1
               className="leading-none tracking-tight"
               style={{
                 fontFamily: 'var(--font-geist-sans), sans-serif',
                 fontWeight: 900,
-                fontSize: 'clamp(42px, 4.2vw, 62px)',
+                fontSize: 'clamp(32px, 8vw, 62px)',
                 color: '#222',
                 letterSpacing: '-0.02em',
               }}
@@ -148,7 +153,9 @@ export default function Home() {
                       color={color}
                       index={i}
                       onReSpin={handleReSpin}
+                      onRemove={handleRemoveColor}
                       canReSpin={reSpinIndex === null && !showGradient}
+                      canRemove={reSpinIndex === null && !showGradient}
                     />
                   ))}
                 </div>
@@ -163,22 +170,6 @@ export default function Home() {
                   </motion.p>
                 )}
               </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Generate button */}
-          <AnimatePresence>
-            {allSpinsDone && !showGradient && reSpinIndex === null && (
-              <motion.button
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setShowGradient(true)}
-                className="py-3.5 px-6 rounded-xl text-white text-sm font-semibold tracking-wider uppercase transition-all duration-150 hover:opacity-90 active:scale-95"
-                style={{ background: '#ff4e10', boxShadow: '0 4px 20px rgba(255,78,16,0.3)' }}
-              >
-                ✨ Generate Background
-              </motion.button>
             )}
           </AnimatePresence>
         </div>
@@ -199,8 +190,7 @@ export default function Home() {
 
       {/* ── MIDDLE: Spinner only ── */}
       <div
-        className="flex flex-col items-center justify-center h-full shrink-0 gap-6"
-        style={{ width: '30%', borderRight: '1px solid #e2e0da', background: '#f5f4f1' }}
+        className="flex flex-col items-center justify-center w-full lg:w-[30%] lg:shrink-0 lg:h-full py-8 lg:py-0 gap-4 lg:gap-6 border-b lg:border-b-0 lg:border-r border-[#e2e0da] bg-[#f5f4f1]"
       >
         {/* Progress pills */}
         <div className="flex items-center gap-2">
@@ -236,13 +226,14 @@ export default function Home() {
       </div>
 
       {/* ── RIGHT: Single block (bars → fuse in place → gradient), centered ── */}
-      <div className="flex-1 min-w-0 flex flex-col overflow-auto">
-        <div className="flex flex-col items-center justify-center flex-1 px-6 py-8" style={{ background: '#f5f4f1' }}>
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-auto">
+        <div className="flex flex-col items-center justify-center flex-1 px-4 py-6 lg:px-6 lg:py-8 bg-[#f5f4f1]">
           <BarToGradientPreview
             collectedColors={collectedColors}
             totalSpins={totalSpins}
             showGradient={showGradient}
             onReset={handleReset}
+            onRequestGenerate={() => setShowGradient(true)}
           />
         </div>
       </div>

@@ -11,11 +11,16 @@
 
 html, body {
   height: 100%;
-  overflow: hidden;
+  min-height: 100%;
+  overflow-x: hidden;
   background: var(--bg);
   color: var(--text-primary);
   font-family: var(--font-geist-sans), sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+@media (min-width: 1024px) {
+  html, body { overflow: hidden; }
 }
 
 * {
