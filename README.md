@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Wallpaper Roulette
 
-## Getting Started
+Spin a color wheel, collect hues, and generate gradient wallpapers. Pick how many colors you want (2–5 spins), watch vertical bars fill as you spin, then fuse them into a single gradient and download a 16:9 PNG.
 
-First, run the development server:
+## Features
+
+- **Roulette wheel** — Spin to land on colors; re-spin any slot before generating.
+- **Live bars** — Each spin adds a vertical bar (1/3, 1/4, or 1/5 of the image width for 3–5 spins).
+- **Fuse animation** — Bars squeeze and blend into one gradient in the same block.
+- **Gradient controls** — Randomize direction; download PNG that matches what you see on screen.
+
+## Run locally
 
 ```bash
+# Install dependencies
+npm install
+
+# Dev server (Turbopack)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# If the dev server hangs on compile, use webpack instead:
+npm run dev:webpack
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## Tech
 
-To learn more about Next.js, take a look at the following resources:
+- **Next.js 16** (App Router)
+- **React 19**
+- **Framer Motion** (animations)
+- **Tailwind CSS 4**
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## License
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Private / unlicensed.
