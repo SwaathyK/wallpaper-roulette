@@ -27,6 +27,29 @@ html, body {
   box-sizing: border-box;
 }
 
+/* Mesh gradient blob animations */
+@keyframes blob-drift-1 {
+  0%, 100% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
+  25%  { transform: translate(18px, -12px) rotate(12deg) scale(1.04); }
+  50%  { transform: translate(-8px, 16px) rotate(-8deg) scale(0.97); }
+  75%  { transform: translate(12px, 8px) rotate(18deg) scale(1.02); }
+}
+@keyframes blob-drift-2 {
+  0%, 100% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
+  33%  { transform: translate(-16px, 12px) rotate(-16deg) scale(1.05); }
+  66%  { transform: translate(8px, -16px) rotate(10deg) scale(0.95); }
+}
+@keyframes blob-drift-3 {
+  0%, 100% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
+  40%  { transform: translate(12px, 18px) rotate(20deg) scale(1.06); }
+  80%  { transform: translate(-12px, -8px) rotate(-12deg) scale(0.98); }
+}
+@keyframes blob-drift-4 {
+  0%, 100% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
+  20%  { transform: translate(-8px, -16px) rotate(-14deg) scale(1.03); }
+  60%  { transform: translate(16px, 12px) rotate(18deg) scale(0.96); }
+}
+
 /* Custom dropdown arrow */
 select {
   appearance: none;

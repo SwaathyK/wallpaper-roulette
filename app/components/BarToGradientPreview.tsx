@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { hslToHex } from '../utils/colorGenerator';
-import { generateGradientDataUrl, downloadDataUrl } from '../utils/canvasUtils';
+import { generateMeshGradientDataUrl, downloadDataUrl } from '../utils/canvasUtils';
 
 function shuffle<T>(arr: T[]): T[] {
   const out = [...arr];
@@ -14,6 +14,153 @@ function shuffle<T>(arr: T[]): T[] {
   return out;
 }
 
+// ── Hex helpers ──────────────────────────────────────────────────────────────
+
+function hexToRgb(hex: string): [number, number, number] {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  return '#' + [r, g, b]
+    .map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function averageHex(hexColors: string[]): string {
+  const rgbs = hexColors.map(hexToRgb);
+  const avg = [0, 1, 2].map(i => rgbs.reduce((s, c) => s + c[i], 0) / rgbs.length);
+  return rgbToHex(avg[0], avg[1], avg[2]);
+}
+
+function shiftBrightness(hex: string, delta: number): string {
+  const [r, g, b] = hexToRgb(hex);
+  return rgbToHex(r + delta, g + delta, b + delta);
+}
+
+// ── Blob generation ──────────────────────────────────────────────────────────
+
+type ShapeMode = 'smooth' | 'angular';
+
+interface BlobConfig {
+  style: {
+    width: string;
+    height: string;
+    top: string;
+    left: string;
+    borderRadius?: string;
+    clipPath?: string;
+  };
+  animation: string;
+  opacity: number;
+}
+
+const DRIFT_ANIMS = ['blob-drift-1', 'blob-drift-2', 'blob-drift-3', 'blob-drift-4'];
+const DRIFT_DURATIONS = ['10s', '13s', '15s', '18s', '20s'];
+
+function randomBorderRadius(): string {
+  const r = () => `${20 + Math.floor(Math.random() * 60)}%`;
+  return `${r()} ${r()} ${r()} ${r()} / ${r()} ${r()} ${r()} ${r()}`;
+}
+
+function randomClipPath(): string {
+  const numPoints = 3 + Math.floor(Math.random() * 6);
+  const angleStep = (Math.PI * 2) / numPoints;
+  const coords = Array.from({ length: numPoints }, (_, i) => {
+    const angle = i * angleStep + (Math.random() - 0.5) * angleStep * 0.6;
+    const radius = 28 + Math.random() * 44;
+    const x = 50 + Math.cos(angle) * radius;
+    const y = 50 + Math.sin(angle) * radius;
+    return `${Math.round(x)}% ${Math.round(y)}%`;
+  });
+  return `polygon(${coords.join(', ')})`;
+}
+
+function generateBlobConfigs(mode: ShapeMode): BlobConfig[] {
+  return Array.from({ length: 4 }, (_, i) => {
+    const w = 65 + Math.floor(Math.random() * 35);
+    const h = 65 + Math.floor(Math.random() * 35);
+    const x = -25 + Math.floor(Math.random() * 78);
+    const y = -25 + Math.floor(Math.random() * 78);
+    const duration = DRIFT_DURATIONS[Math.floor(Math.random() * DRIFT_DURATIONS.length)];
+    const delay = `-${Math.floor(Math.random() * 12)}s`;
+
+    return {
+      style: {
+        width: `${w}%`,
+        height: `${h}%`,
+        top: `${y}%`,
+        left: `${x}%`,
+        ...(mode === 'smooth'
+          ? { borderRadius: randomBorderRadius() }
+          : { clipPath: randomClipPath() }
+        ),
+      },
+      animation: `${DRIFT_ANIMS[i]} ${duration} ease-in-out ${delay} infinite`,
+      opacity: 0.75 + Math.random() * 0.18,
+    };
+  });
+}
+
+function buildBlobColors(hexColors: string[]): string[] {
+  return Array.from({ length: 4 }, (_, i) => {
+    if (i < hexColors.length) return hexColors[i];
+    const base = hexColors[i % hexColors.length];
+    return i % 2 === 0 ? shiftBrightness(base, 40) : shiftBrightness(base, -35);
+  });
+}
+
+// ── MeshGradient ─────────────────────────────────────────────────────────────
+
+function MeshGradient({ colors, blobs }: { colors: string[]; blobs: BlobConfig[] }) {
+  const hexColors = colors.map(hslToHex);
+  // If the user switched a color to black, use a near-black base; otherwise derive from the palette
+  const hasDark = hexColors.includes('#000000');
+  const base = hasDark ? '#0e0e0e' : shiftBrightness(averageHex(hexColors), -40);
+  const blobColors = buildBlobColors(hexColors);
+
+  return (
+    <div className="absolute inset-0" style={{ background: base }}>
+      {blobs.map((blob, i) => (
+        <div
+          key={i}
+          className="absolute"
+          style={{
+            width: blob.style.width,
+            height: blob.style.height,
+            top: blob.style.top,
+            left: blob.style.left,
+            opacity: blob.opacity,
+            filter: 'blur(65px)',
+            animation: blob.animation,
+            willChange: 'transform',
+            // Smooth mode: borderRadius + background on the blurred div itself
+            // so blur bleeds naturally beyond the rounded shape
+            ...(blob.style.borderRadius
+              ? { borderRadius: blob.style.borderRadius, background: blobColors[i] }
+              : {}
+            ),
+          }}
+        >
+          {/* Angular mode: clipPath on inner div so blur bleeds beyond the polygon */}
+          {blob.style.clipPath && (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                background: blobColors[i],
+                clipPath: blob.style.clipPath,
+              }}
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Main component ───────────────────────────────────────────────────────────
+
 interface BarToGradientPreviewProps {
   collectedColors: string[];
   totalSpins: number;
@@ -22,7 +169,6 @@ interface BarToGradientPreviewProps {
   onRequestGenerate?: () => void;
 }
 
-/** One 16:9 block: bars fill as you spin, then fuse in-place into gradient. Buttons below. */
 export default function BarToGradientPreview({
   collectedColors,
   totalSpins,
@@ -31,21 +177,22 @@ export default function BarToGradientPreview({
   onRequestGenerate,
 }: BarToGradientPreviewProps) {
   const [fuseComplete, setFuseComplete] = useState(false);
-  const [gradientAngle, setGradientAngle] = useState(() => Math.floor(Math.random() * 360));
   const [gradientColorOrder, setGradientColorOrder] = useState<number[]>([]);
-  const initialOrderRef = useRef<number[] | null>(null);
+  const [shapeMode, setShapeMode] = useState<ShapeMode>('smooth');
+  const [blobConfigs, setBlobConfigs] = useState<BlobConfig[]>(() => generateBlobConfigs('smooth'));
   const barWidthPercent = totalSpins > 0 ? 100 / totalSpins : 0;
 
+  // Runs once when gradient first appears — shuffle colors and generate blob layout
   useLayoutEffect(() => {
     if (!showGradient) {
       setFuseComplete(false);
-      initialOrderRef.current = null;
+      setGradientColorOrder([]);
       return;
     }
-    if (initialOrderRef.current && initialOrderRef.current.length === collectedColors.length) {
-      setGradientColorOrder(initialOrderRef.current);
-    }
-  }, [showGradient, collectedColors.length]);
+    setBlobConfigs(generateBlobConfigs('smooth'));
+    setShapeMode('smooth');
+    setGradientColorOrder(shuffle(collectedColors.map((_, i) => i)));
+  }, [showGradient]); // intentionally only on showGradient toggle, not color changes
 
   useEffect(() => {
     if (!showGradient) return;
@@ -53,43 +200,33 @@ export default function BarToGradientPreview({
     return () => clearTimeout(fallback);
   }, [showGradient]);
 
-  const orderedColors =
-    gradientColorOrder.length === collectedColors.length
-      ? gradientColorOrder.map((i) => collectedColors[i])
-      : (() => {
-          if (!showGradient || collectedColors.length === 0) return collectedColors;
-          if (initialOrderRef.current === null || initialOrderRef.current.length !== collectedColors.length) {
-            initialOrderRef.current = shuffle(collectedColors.map((_, i) => i));
-          }
-          return initialOrderRef.current.map((i) => collectedColors[i]);
-        })();
+  // When colors are added or removed live, the shuffled order goes stale (length mismatch).
+  // Fall back to collectedColors directly so the gradient updates instantly.
+  const orderedColors = gradientColorOrder.length === collectedColors.length
+    ? gradientColorOrder.map(i => collectedColors[i])
+    : collectedColors;
 
-  const randomizeDirection = () => {
-    setGradientAngle(Math.floor(Math.random() * 360));
+  const randomizeMesh = () => {
+    const nextMode: ShapeMode = shapeMode === 'smooth' ? 'angular' : 'smooth';
+    setShapeMode(nextMode);
+    setBlobConfigs(generateBlobConfigs(nextMode));
     const indices = gradientColorOrder.length === collectedColors.length
       ? gradientColorOrder
       : collectedColors.map((_, i) => i);
     setGradientColorOrder(shuffle([...indices]));
   };
 
-  const cssGradient =
-    orderedColors.length > 0
-      ? `linear-gradient(${gradientAngle}deg, ${orderedColors.map(hslToHex).join(', ')})`
-      : 'transparent';
-
   return (
     <div className="w-full max-w-md flex flex-col gap-4 items-center justify-center flex-1">
-      {/* Single 16:9 block: bars OR gradient (fuse in place) */}
       <div
         className="w-full rounded-2xl overflow-hidden relative"
         style={{
           aspectRatio: '16/9',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
         }}
       >
         <AnimatePresence mode="wait">
           {!showGradient ? (
-            /* Bars + optional Generate overlay when all filled */
             <>
               <motion.div
                 key="bars"
@@ -118,7 +255,6 @@ export default function BarToGradientPreview({
                   );
                 })}
               </motion.div>
-              {/* Generate Background overlay when all slots filled */}
               {collectedColors.length === totalSpins && onRequestGenerate && (
                 <button
                   type="button"
@@ -138,13 +274,11 @@ export default function BarToGradientPreview({
               )}
             </>
           ) : (
-            /* Fuse: bars squeeze/fade, gradient fades in same container */
             <motion.div
               key="fuse"
               className="absolute inset-0"
               initial={false}
             >
-              {/* Bars squeezing and fading */}
               <motion.div
                 className="absolute inset-0 flex flex-row"
                 initial={false}
@@ -165,20 +299,19 @@ export default function BarToGradientPreview({
                   />
                 ))}
               </motion.div>
-              {/* Gradient appears in same space */}
               <motion.div
-                className="absolute inset-0 rounded-2xl"
-                style={{ background: cssGradient }}
+                className="absolute inset-0 rounded-2xl overflow-hidden"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-              />
+                transition={{ duration: 0.6, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <MeshGradient colors={orderedColors} blobs={blobConfigs} />
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Hint when bars are partially filled */}
       {!showGradient && collectedColors.length > 0 && collectedColors.length < totalSpins && (
         <motion.p
           initial={{ opacity: 0 }}
@@ -197,9 +330,9 @@ export default function BarToGradientPreview({
           transition={{ duration: 0.3 }}
           className="flex items-center gap-3 w-full"
         >
-          {/* Square download icon button */}
+          {/* Download */}
           <button
-            onClick={() => downloadDataUrl(generateGradientDataUrl(orderedColors, 1920, 1080, gradientAngle))}
+            onClick={() => downloadDataUrl(generateMeshGradientDataUrl(orderedColors, 1920, 1080))}
             className="w-12 h-12 rounded-xl flex items-center justify-center text-white transition-all duration-150 hover:opacity-90 active:scale-95"
             style={{ background: '#ff4e10', boxShadow: '0 2px 12px rgba(255,78,16,0.3)' }}
             title="Download PNG"
@@ -211,13 +344,14 @@ export default function BarToGradientPreview({
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
           </button>
-          {/* Square randomizer (reload direction) button */}
+
+          {/* Remix: cycles smooth → angular → smooth */}
           <button
-            onClick={randomizeDirection}
+            onClick={randomizeMesh}
             className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-150 hover:bg-black/5 active:scale-95 border"
             style={{ color: '#64748b', borderColor: '#e2e0da', background: '#fff' }}
-            title="Randomize gradient direction"
-            aria-label="Randomize gradient direction"
+            title={`Remix · currently ${shapeMode}`}
+            aria-label="Remix gradient"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 2v6h-6" />
@@ -226,7 +360,8 @@ export default function BarToGradientPreview({
               <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
             </svg>
           </button>
-          {/* New Roulette — keep as is */}
+
+          {/* New Roulette */}
           <button
             onClick={onReset}
             className="flex-1 py-3 px-4 rounded-xl text-sm font-semibold tracking-wider uppercase transition-all duration-150 hover:bg-black/5 active:scale-95 border"

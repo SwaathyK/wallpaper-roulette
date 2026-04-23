@@ -14,47 +14,58 @@ const BarToGradientPreview = dynamic(
 export default function Home() {
   const [totalSpins, setTotalSpins] = useState(3);
   const [collectedColors, setCollectedColors] = useState<string[]>([]);
-  const [reSpinIndex, setReSpinIndex] = useState<number | null>(null);
+  const [originalColors, setOriginalColors] = useState<string[]>([]); // the raw spun colors, never mutated
   const [showGradient, setShowGradient] = useState(false);
 
-  const allSpinsDone = collectedColors.length === totalSpins;
-  const wheelDisabled = allSpinsDone && reSpinIndex === null;
+  const allSpinsDone = collectedColors.length >= totalSpins;
+  const blackUsed = collectedColors.includes('#000000');
+  const whiteUsed = collectedColors.includes('#ffffff');
 
   const handleColorSelected = useCallback((color: string) => {
-    if (reSpinIndex !== null) {
-      setCollectedColors(prev => {
-        const next = [...prev];
-        next[reSpinIndex] = color;
-        return next;
-      });
-      setReSpinIndex(null);
-    } else {
-      setCollectedColors(prev => [...prev, color]);
-    }
-  }, [reSpinIndex]);
+    setCollectedColors(prev => [...prev, color]);
+    setOriginalColors(prev => [...prev, color]);
+  }, []);
 
-  const handleReSpin = (index: number) => {
-    if (reSpinIndex !== null) return;
-    setReSpinIndex(index);
-    setShowGradient(false);
+  // Cycle: original → black (if free) → white (if free) → original
+  const handleCycleColor = (index: number) => {
+    const current = collectedColors[index];
+    const original = originalColors[index];
+
+    let next: string | null = null;
+
+    if (current === original) {
+      if (!blackUsed) next = '#000000';
+      else if (!whiteUsed) next = '#ffffff';
+    } else if (current === '#000000') {
+      next = !whiteUsed ? '#ffffff' : original;
+    } else if (current === '#ffffff') {
+      next = original;
+    }
+
+    if (next !== null) {
+      setCollectedColors(prev => { const n = [...prev]; n[index] = next!; return n; });
+    }
   };
 
   const handleRemoveColor = (index: number) => {
-    if (reSpinIndex !== null || showGradient) return;
-    setCollectedColors((prev) => prev.filter((_, i) => i !== index));
-    setShowGradient(false);
+    setCollectedColors(prev => {
+      const next = prev.filter((_, i) => i !== index);
+      if (next.length === 0) setShowGradient(false);
+      return next;
+    });
+    setOriginalColors(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleReset = () => {
     setCollectedColors([]);
-    setReSpinIndex(null);
+    setOriginalColors([]);
     setShowGradient(false);
   };
 
   const handleSpinCountChange = (n: number) => {
     setTotalSpins(n);
     setCollectedColors([]);
-    setReSpinIndex(null);
+    setOriginalColors([]);
     setShowGradient(false);
   };
 
@@ -63,11 +74,8 @@ export default function Home() {
       className="w-full min-h-screen lg:h-screen lg:overflow-hidden flex flex-col lg:flex-row"
       style={{ background: '#f5f4f1', fontFamily: 'var(--font-inter), Inter, sans-serif' }}
     >
-      {/* ── LEFT: Heading + contents ── */}
-      <div
-        className="flex flex-col justify-between w-full lg:w-[28%] lg:shrink-0 lg:h-full px-6 py-8 lg:px-8 lg:py-12 border-b lg:border-b-0 lg:border-r border-[#e2e0da]"
-      >
-        {/* Top: branding */}
+      {/* ── LEFT ── */}
+      <div className="flex flex-col justify-between w-full lg:w-[28%] lg:shrink-0 lg:h-full px-6 py-8 lg:px-8 lg:py-12 border-b lg:border-b-0 lg:border-r border-[#e2e0da]">
         <div className="flex flex-col gap-1">
           <span
             className="text-[11px] tracking-[0.35em] uppercase font-medium whitespace-nowrap"
@@ -77,7 +85,6 @@ export default function Home() {
           </span>
         </div>
 
-        {/* Middle: heading + controls */}
         <div className="flex flex-col gap-6 lg:gap-8">
           <div className="flex flex-col gap-3">
             <h1
@@ -101,12 +108,9 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Spin count dropdown */}
+          {/* Spin count */}
           <div className="flex flex-col gap-2">
-            <label
-              className="text-[11px] tracking-[0.25em] uppercase font-medium"
-              style={{ color: '#aaa' }}
-            >
+            <label className="text-[11px] tracking-[0.25em] uppercase font-medium" style={{ color: '#aaa' }}>
               Number of spins
             </label>
             <div className="relative inline-block" style={{ width: 140 }}>
@@ -132,7 +136,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Collected color chips */}
+          {/* Collected colors */}
           <AnimatePresence>
             {collectedColors.length > 0 && (
               <motion.div
@@ -140,10 +144,7 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 className="flex flex-col gap-3"
               >
-                <span
-                  className="text-[11px] tracking-[0.25em] uppercase font-medium"
-                  style={{ color: '#aaa' }}
-                >
+                <span className="text-[11px] tracking-[0.25em] uppercase font-medium" style={{ color: '#aaa' }}>
                   Collected colors
                 </span>
                 <div className="flex gap-4 flex-wrap">
@@ -152,29 +153,21 @@ export default function Home() {
                       key={`${i}-${color}`}
                       color={color}
                       index={i}
-                      onReSpin={handleReSpin}
+                      onCycle={handleCycleColor}
                       onRemove={handleRemoveColor}
-                      canReSpin={reSpinIndex === null && !showGradient}
-                      canRemove={reSpinIndex === null && !showGradient}
+                      canCycle={
+                        color !== originalColors[i] // currently switched → can always cycle back
+                        || !blackUsed              // black slot free
+                        || !whiteUsed              // white slot free
+                      }
                     />
                   ))}
                 </div>
-                {reSpinIndex !== null && (
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-xs"
-                    style={{ color: '#ff4e10' }}
-                  >
-                    Re-spinning slot {reSpinIndex + 1}… click ⚡ on the wheel
-                  </motion.p>
-                )}
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        {/* Bottom: reset link */}
         <div className="flex items-center">
           {collectedColors.length > 0 && (
             <button
@@ -188,11 +181,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── MIDDLE: Spinner only ── */}
-      <div
-        className="flex flex-col items-center justify-center w-full lg:w-[30%] lg:shrink-0 lg:h-full py-8 lg:py-0 gap-4 lg:gap-6 border-b lg:border-b-0 lg:border-r border-[#e2e0da] bg-[#f5f4f1]"
-      >
-        {/* Progress pills */}
+      {/* ── MIDDLE: Wheel ── */}
+      <div className="flex flex-col items-center justify-center w-full lg:w-[30%] lg:shrink-0 lg:h-full py-8 lg:py-0 gap-4 lg:gap-6 border-b lg:border-b-0 lg:border-r border-[#e2e0da] bg-[#f5f4f1]">
         <div className="flex items-center gap-2">
           {Array.from({ length: totalSpins }).map((_, i) => (
             <motion.div
@@ -211,21 +201,18 @@ export default function Home() {
               }}
             />
           ))}
-          <span
-            className="text-xs font-mono ml-1"
-            style={{ color: '#94a3b8' }}
-          >
+          <span className="text-xs font-mono ml-1" style={{ color: '#94a3b8' }}>
             {collectedColors.length}/{totalSpins}
           </span>
         </div>
 
         <RouletteWheel
           onColorSelected={handleColorSelected}
-          disabled={wheelDisabled}
+          disabled={allSpinsDone}
         />
       </div>
 
-      {/* ── RIGHT: Single block (bars → fuse in place → gradient), centered ── */}
+      {/* ── RIGHT: Preview ── */}
       <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-auto">
         <div className="flex flex-col items-center justify-center flex-1 px-4 py-6 lg:px-6 lg:py-8 bg-[#f5f4f1]">
           <BarToGradientPreview
