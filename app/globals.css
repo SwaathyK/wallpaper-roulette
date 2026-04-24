@@ -30,24 +30,24 @@ html, body {
 /* Mesh gradient blob animations */
 @keyframes blob-drift-1 {
   0%, 100% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
-  25%  { transform: translate(18px, -12px) rotate(12deg) scale(1.04); }
-  50%  { transform: translate(-8px, 16px) rotate(-8deg) scale(0.97); }
-  75%  { transform: translate(12px, 8px) rotate(18deg) scale(1.02); }
+  25%  { transform: translate(100px, -80px) rotate(20deg) scale(1.08); }
+  50%  { transform: translate(-60px, 90px) rotate(-15deg) scale(0.93); }
+  75%  { transform: translate(80px, 50px) rotate(25deg) scale(1.05); }
 }
 @keyframes blob-drift-2 {
   0%, 100% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
-  33%  { transform: translate(-16px, 12px) rotate(-16deg) scale(1.05); }
-  66%  { transform: translate(8px, -16px) rotate(10deg) scale(0.95); }
+  33%  { transform: translate(-90px, 70px) rotate(-22deg) scale(1.09); }
+  66%  { transform: translate(70px, -100px) rotate(18deg) scale(0.91); }
 }
 @keyframes blob-drift-3 {
   0%, 100% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
-  40%  { transform: translate(12px, 18px) rotate(20deg) scale(1.06); }
-  80%  { transform: translate(-12px, -8px) rotate(-12deg) scale(0.98); }
+  40%  { transform: translate(85px, 95px) rotate(28deg) scale(1.10); }
+  80%  { transform: translate(-75px, -60px) rotate(-20deg) scale(0.94); }
 }
 @keyframes blob-drift-4 {
   0%, 100% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
-  20%  { transform: translate(-8px, -16px) rotate(-14deg) scale(1.03); }
-  60%  { transform: translate(16px, 12px) rotate(18deg) scale(0.96); }
+  20%  { transform: translate(-80px, -90px) rotate(-24deg) scale(1.07); }
+  60%  { transform: translate(95px, 75px) rotate(22deg) scale(0.92); }
 }
 
 /* Custom dropdown arrow */

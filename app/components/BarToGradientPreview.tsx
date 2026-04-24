@@ -56,7 +56,7 @@ interface BlobConfig {
 }
 
 const DRIFT_ANIMS = ['blob-drift-1', 'blob-drift-2', 'blob-drift-3', 'blob-drift-4'];
-const DRIFT_DURATIONS = ['10s', '13s', '15s', '18s', '20s'];
+const DRIFT_DURATIONS = ['8s', '10s', '12s', '14s', '16s'];
 
 function randomBorderRadius(): string {
   const r = () => `${20 + Math.floor(Math.random() * 60)}%`;
@@ -131,7 +131,7 @@ function MeshGradient({ colors, blobs }: { colors: string[]; blobs: BlobConfig[]
             top: blob.style.top,
             left: blob.style.left,
             opacity: blob.opacity,
-            filter: 'blur(65px)',
+            filter: 'blur(40px)',
             animation: blob.animation,
             willChange: 'transform',
             // Smooth mode: borderRadius + background on the blurred div itself
