@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { ExternalLink } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import RouletteWheel from './components/RouletteWheel';
@@ -168,16 +169,38 @@ export default function Home() {
           </AnimatePresence>
         </div>
 
-        <div className="flex items-center">
+        <div className="flex flex-col gap-3">
           {collectedColors.length > 0 && (
             <button
               onClick={handleReset}
-              className="text-xs tracking-wider uppercase transition-colors hover:opacity-80"
+              className="text-xs tracking-wider uppercase transition-colors hover:opacity-80 text-left"
               style={{ color: '#bbb', fontFamily: 'var(--font-geist-sans), sans-serif' }}
             >
               ↺ Start over
             </button>
           )}
+          <p className="text-[11px] flex items-center gap-1" style={{ color: '#ccc', fontFamily: 'var(--font-geist-sans), sans-serif' }}>
+            <span>Made by</span>
+            <a
+              href="https://x.com/SwaathyK"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:opacity-70 transition-opacity"
+              style={{ color: '#aaa' }}
+            >
+              @SwaathyK
+            </a>
+            <span>·</span>
+            <a
+              href="http://swaathykumaran.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center hover:opacity-70 transition-opacity"
+              style={{ color: '#aaa' }}
+            >
+              <ExternalLink size={11} />
+            </a>
+          </p>
         </div>
       </div>
 
