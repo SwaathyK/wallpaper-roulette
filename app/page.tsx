@@ -7,33 +7,33 @@ import { motion, AnimatePresence } from 'framer-motion';
 import RouletteWheel from './components/RouletteWheel';
 import ColorChip from './components/ColorChip';
 
+const MAX_COLORS = 5;
+
 const BarToGradientPreview = dynamic(
   () => import('./components/BarToGradientPreview'),
   { ssr: false, loading: () => <div className="w-full max-w-md aspect-video rounded-2xl bg-[#e8e6e3] animate-pulse" /> }
 );
 
 export default function Home() {
-  const [totalSpins, setTotalSpins] = useState(3);
   const [collectedColors, setCollectedColors] = useState<string[]>([]);
-  const [originalColors, setOriginalColors] = useState<string[]>([]); // the raw spun colors, never mutated
+  const [originalColors, setOriginalColors] = useState<string[]>([]);
   const [showGradient, setShowGradient] = useState(false);
 
-  const allSpinsDone = collectedColors.length >= totalSpins;
-  const blackUsed = collectedColors.includes('#000000');
-  const whiteUsed = collectedColors.includes('#ffffff');
+  const allSpinsDone = collectedColors.length >= MAX_COLORS;
 
   const handleColorSelected = useCallback((color: string) => {
     setCollectedColors(prev => [...prev, color]);
     setOriginalColors(prev => [...prev, color]);
+    setShowGradient(true);
   }, []);
 
-  // Cycle: original → black (if free) → white (if free) → original
+  const blackUsed = collectedColors.includes('#000000');
+  const whiteUsed = collectedColors.includes('#ffffff');
+
   const handleCycleColor = (index: number) => {
     const current = collectedColors[index];
     const original = originalColors[index];
-
     let next: string | null = null;
-
     if (current === original) {
       if (!blackUsed) next = '#000000';
       else if (!whiteUsed) next = '#ffffff';
@@ -42,7 +42,6 @@ export default function Home() {
     } else if (current === '#ffffff') {
       next = original;
     }
-
     if (next !== null) {
       setCollectedColors(prev => { const n = [...prev]; n[index] = next!; return n; });
     }
@@ -63,13 +62,6 @@ export default function Home() {
     setShowGradient(false);
   };
 
-  const handleSpinCountChange = (n: number) => {
-    setTotalSpins(n);
-    setCollectedColors([]);
-    setOriginalColors([]);
-    setShowGradient(false);
-  };
-
   return (
     <main
       className="w-full min-h-screen lg:h-screen lg:overflow-hidden flex flex-col lg:flex-row"
@@ -77,7 +69,7 @@ export default function Home() {
     >
       {/* ── LEFT ── */}
       <div className="flex flex-col justify-between w-full lg:w-[28%] lg:shrink-0 lg:h-full px-6 py-8 lg:px-8 lg:py-12 border-b lg:border-b-0 lg:border-r border-[#e2e0da]">
-        <div className="flex flex-col gap-1">
+        <div>
           <span
             className="text-[11px] tracking-[0.35em] uppercase font-medium whitespace-nowrap"
             style={{ color: '#ff4e10' }}
@@ -100,41 +92,10 @@ export default function Home() {
             >
               Spin &amp;<br />Generate.
             </h1>
-            <p
-              className="text-sm leading-relaxed"
-              style={{ color: '#888', fontFamily: 'var(--font-geist-sans), sans-serif' }}
-            >
-              Spin the wheel · collect colors<br />
-              get your gradient
+            <p className="text-sm leading-relaxed" style={{ color: '#888', fontFamily: 'var(--font-geist-sans), sans-serif' }}>
+              Spin the wheel · collect up to 5 colors<br />
+              get your wallpaper
             </p>
-          </div>
-
-          {/* Spin count */}
-          <div className="flex flex-col gap-2">
-            <label className="text-[11px] tracking-[0.25em] uppercase font-medium" style={{ color: '#aaa' }}>
-              Number of spins
-            </label>
-            <div className="relative inline-block" style={{ width: 140 }}>
-              <select
-                value={totalSpins}
-                onChange={e => handleSpinCountChange(Number(e.target.value))}
-                className="w-full py-2.5 pl-4 pr-9 rounded-xl text-sm font-semibold border outline-none cursor-pointer transition-all duration-150"
-                style={{
-                  background: '#fff',
-                  borderColor: '#e2e0da',
-                  color: '#222',
-                  fontFamily: 'var(--font-geist-sans), sans-serif',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                }}
-                onFocus={e => { e.target.style.borderColor = '#ff4e10'; e.target.style.boxShadow = '0 0 0 3px rgba(255,78,16,0.12)'; }}
-                onBlur={e => { e.target.style.borderColor = '#e2e0da'; e.target.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)'; }}
-              >
-                <option value={2}>2 spins</option>
-                <option value={3}>3 spins</option>
-                <option value={4}>4 spins</option>
-                <option value={5}>5 spins</option>
-              </select>
-            </div>
           </div>
 
           {/* Collected colors */}
@@ -154,16 +115,23 @@ export default function Home() {
                       key={`${i}-${color}`}
                       color={color}
                       index={i}
-                      onCycle={handleCycleColor}
                       onRemove={handleRemoveColor}
+                      onCycle={handleCycleColor}
                       canCycle={
-                        color !== originalColors[i] // currently switched → can always cycle back
-                        || !blackUsed              // black slot free
-                        || !whiteUsed              // white slot free
+                        color !== originalColors[i]
+                        || !blackUsed
+                        || !whiteUsed
                       }
                     />
                   ))}
                 </div>
+
+                {/* Hint — shown until both black and white slots are used */}
+                {(!blackUsed || !whiteUsed) && (
+                  <p className="text-[10px]" style={{ color: '#bbb', fontFamily: 'var(--font-geist-sans), sans-serif' }}>
+                    Tap a color to switch it to black or white
+                  </p>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -181,23 +149,11 @@ export default function Home() {
           )}
           <p className="text-[11px] flex items-center gap-1" style={{ color: '#ccc', fontFamily: 'var(--font-geist-sans), sans-serif' }}>
             <span>Made by</span>
-            <a
-              href="https://x.com/SwaathyK"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:opacity-70 transition-opacity"
-              style={{ color: '#aaa' }}
-            >
+            <a href="https://x.com/SwaathyK" target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity" style={{ color: '#aaa' }}>
               @SwaathyK
             </a>
             <span>·</span>
-            <a
-              href="http://swaathykumaran.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center hover:opacity-70 transition-opacity"
-              style={{ color: '#aaa' }}
-            >
+            <a href="http://swaathykumaran.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center hover:opacity-70 transition-opacity" style={{ color: '#aaa' }}>
               <ExternalLink size={11} />
             </a>
           </p>
@@ -206,8 +162,9 @@ export default function Home() {
 
       {/* ── MIDDLE: Wheel ── */}
       <div className="flex flex-col items-center justify-center w-full lg:w-[30%] lg:shrink-0 lg:h-full py-8 lg:py-0 gap-4 lg:gap-6 border-b lg:border-b-0 lg:border-r border-[#e2e0da] bg-[#f5f4f1]">
+        {/* Color progress pills — up to 5 slots */}
         <div className="flex items-center gap-2">
-          {Array.from({ length: totalSpins }).map((_, i) => (
+          {Array.from({ length: MAX_COLORS }).map((_, i) => (
             <motion.div
               key={i}
               animate={{
@@ -218,21 +175,27 @@ export default function Home() {
               style={{
                 height: 8,
                 borderRadius: 4,
-                boxShadow: i < collectedColors.length
-                  ? `0 0 8px ${collectedColors[i]}88`
-                  : 'none',
+                boxShadow: i < collectedColors.length ? `0 0 8px ${collectedColors[i]}88` : 'none',
               }}
             />
           ))}
-          <span className="text-xs font-mono ml-1" style={{ color: '#94a3b8' }}>
-            {collectedColors.length}/{totalSpins}
-          </span>
         </div>
 
         <RouletteWheel
           onColorSelected={handleColorSelected}
           disabled={allSpinsDone}
         />
+
+        {allSpinsDone && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-xs tracking-widest uppercase"
+            style={{ color: '#94a3b8' }}
+          >
+            Max 5 colors reached
+          </motion.p>
+        )}
       </div>
 
       {/* ── RIGHT: Preview ── */}
@@ -240,10 +203,8 @@ export default function Home() {
         <div className="flex flex-col items-center justify-center flex-1 px-4 py-6 lg:px-6 lg:py-8 bg-[#f5f4f1]">
           <BarToGradientPreview
             collectedColors={collectedColors}
-            totalSpins={totalSpins}
             showGradient={showGradient}
             onReset={handleReset}
-            onRequestGenerate={() => setShowGradient(true)}
           />
         </div>
       </div>

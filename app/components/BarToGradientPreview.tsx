@@ -159,45 +159,57 @@ function MeshGradient({ colors, blobs }: { colors: string[]; blobs: BlobConfig[]
 
 interface BarToGradientPreviewProps {
   collectedColors: string[];
-  totalSpins: number;
   showGradient: boolean;
   onReset: () => void;
-  onRequestGenerate?: () => void;
 }
 
 export default function BarToGradientPreview({
   collectedColors,
-  totalSpins,
   showGradient,
   onReset,
-  onRequestGenerate,
 }: BarToGradientPreviewProps) {
-  const [fuseComplete, setFuseComplete] = useState(false);
   const [gradientColorOrder, setGradientColorOrder] = useState<number[]>([]);
   const [shapeMode, setShapeMode] = useState<ShapeMode>('smooth');
   const [blobConfigs, setBlobConfigs] = useState<BlobConfig[]>(() => generateBlobConfigs('smooth'));
-  const barWidthPercent = totalSpins > 0 ? 100 / totalSpins : 0;
+  const [actionsVisible, setActionsVisible] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Runs once when gradient first appears — shuffle colors and generate blob layout
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  const downloadDimensions = () => {
+    const dpr = window.devicePixelRatio || 1;
+    const w = window.screen.width * dpr;
+    const h = window.screen.height * dpr;
+    // Ensure portrait for mobile, landscape for desktop
+    return isMobile
+      ? { width: Math.min(w, h), height: Math.max(w, h) }
+      : { width: Math.max(w, h), height: Math.min(w, h) };
+  };
+
+  // Generate blobs once when gradient first appears
   useLayoutEffect(() => {
     if (!showGradient) {
-      setFuseComplete(false);
+      setActionsVisible(false);
       setGradientColorOrder([]);
       return;
     }
     setBlobConfigs(generateBlobConfigs('smooth'));
     setShapeMode('smooth');
     setGradientColorOrder(shuffle(collectedColors.map((_, i) => i)));
-  }, [showGradient]); // intentionally only on showGradient toggle, not color changes
+  }, [showGradient]);
 
   useEffect(() => {
     if (!showGradient) return;
-    const fallback = setTimeout(() => setFuseComplete(true), 800);
-    return () => clearTimeout(fallback);
+    const t = setTimeout(() => setActionsVisible(true), 600);
+    return () => clearTimeout(t);
   }, [showGradient]);
 
-  // When colors are added or removed live, the shuffled order goes stale (length mismatch).
-  // Fall back to collectedColors directly so the gradient updates instantly.
+  // Live updates: when colors added/removed the order goes stale — fall back to direct order
   const orderedColors = gradientColorOrder.length === collectedColors.length
     ? gradientColorOrder.map(i => collectedColors[i])
     : collectedColors;
@@ -217,109 +229,44 @@ export default function BarToGradientPreview({
       <div
         className="w-full rounded-2xl overflow-hidden relative"
         style={{
-          aspectRatio: '16/9',
+          aspectRatio: isMobile ? '9/16' : '16/9',
+          maxHeight: isMobile ? '70vh' : undefined,
           boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
         }}
       >
         <AnimatePresence mode="wait">
           {!showGradient ? (
-            <>
-              <motion.div
-                key="bars"
-                initial={false}
-                className="absolute inset-0 flex flex-row"
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                {Array.from({ length: totalSpins }).map((_, i) => {
-                  const color = collectedColors[i];
-                  const filled = !!color;
-                  return (
-                    <motion.div
-                      key={`${i}-${color ?? 'empty'}`}
-                      initial={filled ? { scaleX: 0, opacity: 0.9 } : { scaleX: 1, opacity: 1 }}
-                      animate={{ scaleX: 1, opacity: 1 }}
-                      transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-                      style={{
-                        width: `${barWidthPercent}%`,
-                        flexShrink: 0,
-                        height: '100%',
-                        background: color || '#e8e6e3',
-                        transformOrigin: 'center',
-                      }}
-                    />
-                  );
-                })}
-              </motion.div>
-              {collectedColors.length === totalSpins && onRequestGenerate && (
-                <button
-                  type="button"
-                  onClick={onRequestGenerate}
-                  className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-black/20 transition-colors hover:bg-black/30 active:bg-black/40"
-                  style={{
-                    fontFamily: 'var(--font-geist-sans), sans-serif',
-                    fontWeight: 900,
-                    fontSize: 'clamp(14px, 2.8vw, 22px)',
-                    color: 'rgba(255,255,255,0.92)',
-                    letterSpacing: '-0.02em',
-                    textShadow: '0 1px 3px rgba(0,0,0,0.25)',
-                  }}
-                >
-                  Generate Background
-                </button>
-              )}
-            </>
-          ) : (
+            /* Placeholder before first spin */
             <motion.div
-              key="fuse"
-              className="absolute inset-0"
-              initial={false}
+              key="empty"
+              className="absolute inset-0 flex items-center justify-center"
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              style={{ background: '#e8e6e3' }}
             >
-              <motion.div
-                className="absolute inset-0 flex flex-row"
-                initial={false}
-                animate={{ opacity: 0, scaleX: 0.98, scaleY: 0.96 }}
-                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                style={{ transformOrigin: 'center center' }}
-                onAnimationComplete={() => setFuseComplete(true)}
+              <p
+                className="text-sm tracking-widest uppercase select-none"
+                style={{ color: '#bbb', fontFamily: 'var(--font-geist-sans), sans-serif', letterSpacing: '0.2em' }}
               >
-                {orderedColors.map((color, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      width: `${100 / collectedColors.length}%`,
-                      height: '100%',
-                      background: color,
-                      flexShrink: 0,
-                    }}
-                  />
-                ))}
-              </motion.div>
-              <motion.div
-                className="absolute inset-0 rounded-2xl overflow-hidden"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.6, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-              >
-                <MeshGradient colors={orderedColors} blobs={blobConfigs} />
-              </motion.div>
+                Spin to generate
+              </p>
+            </motion.div>
+          ) : (
+            /* Gradient — fades in on first appearance, updates live after */
+            <motion.div
+              key="gradient"
+              className="absolute inset-0 rounded-2xl overflow-hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <MeshGradient colors={orderedColors} blobs={blobConfigs} />
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {!showGradient && collectedColors.length > 0 && collectedColors.length < totalSpins && (
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-xs text-center"
-          style={{ color: '#94a3b8', fontFamily: 'var(--font-geist-sans), sans-serif' }}
-        >
-          {collectedColors.length} of {totalSpins} colors · spin again or remove one above
-        </motion.p>
-      )}
-
-      {showGradient && fuseComplete && (
+      {showGradient && actionsVisible && (
         <motion.div
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
@@ -328,7 +275,10 @@ export default function BarToGradientPreview({
         >
           {/* Download */}
           <button
-            onClick={() => downloadDataUrl(generateMeshGradientDataUrl(orderedColors, 1920, 1080))}
+            onClick={() => {
+              const { width, height } = downloadDimensions();
+              downloadDataUrl(generateMeshGradientDataUrl(orderedColors, width, height));
+            }}
             className="w-12 h-12 rounded-xl flex items-center justify-center text-white transition-all duration-150 hover:opacity-90 active:scale-95"
             style={{ background: '#ff4e10', boxShadow: '0 2px 12px rgba(255,78,16,0.3)' }}
             title="Download PNG"
@@ -341,7 +291,7 @@ export default function BarToGradientPreview({
             </svg>
           </button>
 
-          {/* Remix: cycles smooth → angular → smooth */}
+          {/* Remix */}
           <button
             onClick={randomizeMesh}
             className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-150 hover:bg-black/5 active:scale-95 border"
