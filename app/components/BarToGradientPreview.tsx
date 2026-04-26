@@ -56,7 +56,7 @@ interface BlobConfig {
 }
 
 const DRIFT_ANIMS = ['blob-drift-1', 'blob-drift-2', 'blob-drift-3', 'blob-drift-4'];
-const DRIFT_DURATIONS = ['8s', '10s', '12s', '14s', '16s'];
+const DRIFT_DURATIONS = ['20s', '24s', '28s', '32s', '36s'];
 
 function randomBorderRadius(): string {
   const r = () => `${20 + Math.floor(Math.random() * 60)}%`;
@@ -103,11 +103,7 @@ function generateBlobConfigs(mode: ShapeMode): BlobConfig[] {
 }
 
 function buildBlobColors(hexColors: string[]): string[] {
-  return Array.from({ length: 4 }, (_, i) => {
-    if (i < hexColors.length) return hexColors[i];
-    const base = hexColors[i % hexColors.length];
-    return i % 2 === 0 ? shiftBrightness(base, 40) : shiftBrightness(base, -35);
-  });
+  return Array.from({ length: 4 }, (_, i) => hexColors[i % hexColors.length]);
 }
 
 // ── MeshGradient ─────────────────────────────────────────────────────────────

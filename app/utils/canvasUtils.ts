@@ -84,11 +84,7 @@ const CANVAS_BLOB_POSITIONS = [
 ];
 
 function buildBlobColors(hexColors: string[]): string[] {
-  return CANVAS_BLOB_POSITIONS.map((_, i) => {
-    if (i < hexColors.length) return hexColors[i];
-    const base = hexColors[i % hexColors.length];
-    return i % 2 === 0 ? shiftBrightness(base, 35) : shiftBrightness(base, -30);
-  });
+  return CANVAS_BLOB_POSITIONS.map((_, i) => hexColors[i % hexColors.length]);
 }
 
 export function generateMeshGradientDataUrl(
